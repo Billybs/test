@@ -141,11 +141,11 @@ const SOILMAP_PATH = './images/heightmap.png';
 const AMBIENTLIGHT_INTENSITY = 0.1;
 const DIRECTIONALLIGHT_INTENSITY = 0.3;
 
-const UFOLIGHT_INTENSITY = 1500;
+const UFOLIGHT_INTENSITY = 1000;
 const UFOLIGHT_ANGLE = Math.PI / 4;
 const UFOLIGHT_PENUMBRA = 0.4;
 const UFOSPHERELIGHT_COUNT = 8;
-const UFOSPHERELIGHT_INTENSITY = 0.6;
+const UFOSPHERELIGHT_INTENSITY = 20;
 const UFO_ELLIPSOID_SCALING = new THREE.Vector3(5, 1.2, 5);
 const UFO_ANGULAR_VEL = (2 * Math.PI) / 8; 
 const UFO_LINEAR_VEL = 8;
@@ -158,17 +158,17 @@ const ORBITAL_CAMERA = createPerspectiveCamera({
   fov: 72,
   near: 1,
   far: 400,
-  x: -50,
-  y: 30,
-  z: -42,
+  x: -45,
+  y: 15,
+  z: -45,
 });
 const FIXED_CAMERA = createPerspectiveCamera({
   fov: 72,
   near: 1,
   far: 400,
-  x: -50,
-  y: 30,
-  z: -42,
+  x: -45,
+  y: 15,
+  z: -45,
 });
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -370,12 +370,11 @@ function createMoon() {
 
 function createUfo() {
   ufo = new THREE.Group();
-  ufo.position.set(0, 20, 0);
+  ufo.position.set(0, 22, 0);
   baseGroup.add(ufo);
 
   const disc = createNamedMesh('ufoDisc', ufo);
   disc.scale.copy(UFO_ELLIPSOID_SCALING);
-  disc.castShadow = true;
 
   const cockpit = createNamedMesh('ufoCockpit', ufo);
   cockpit.position.set(0, UFO_ELLIPSOID_SCALING.y / 2 + 0.2, 0);
@@ -383,7 +382,7 @@ function createUfo() {
   const light = createNamedMesh('ufoLight', ufo);
   light.position.set(0, -UFO_ELLIPSOID_SCALING.y, 0);
   const lightTarget = new THREE.Object3D();
-  lightTarget.position.set(0, -10, 0);
+  lightTarget.position.set(0, -12, 0);
 
   ufo.add(lightTarget);
 
@@ -406,9 +405,8 @@ function createUfo() {
     const sphereY = - UFO_ELLIPSOID_SCALING.y / 2 - 0.25;
     sphere.position.set(sphereX, sphereY, 0);
 
-    const sphereLight = new THREE.PointLight(0xff0000, UFOSPHERELIGHT_INTENSITY, 20);
-    //set light source slightly away from disc reach
-    sphereLight.position.set(sphereX, sphereY - 0.25, 0); 
+    const sphereLight = new THREE.PointLight(0xff0000, UFOSPHERELIGHT_INTENSITY, 1.7, 5);
+    sphereLight.position.set(sphereX, sphereY, 0); 
     sphereGroup.add(sphereLight);
     ufoSphereLights.push(sphereLight);
   }
