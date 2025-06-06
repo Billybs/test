@@ -402,19 +402,13 @@ function createUfo() {
 
     // calculate sphereX by subtracting the light radius and adding 1/2 of the 
     // sphere light radius to the disc ellipsoid radius
-
-    const sphereY = -UFO_ELLIPSOID_SCALING.y / 2;
-    // Calculate sphereX by intercepting the ellipse equation at this Y coordinate
-    // Ellipse equation: x^2/a^2 + y^2/b^2 = 1, where a is rx and b is ry.
-    // Therefore, x = sqrt(a^2 * (1 - y^2/b^2))
-    const sphereX = Math.sqrt(
-      UFO_ELLIPSOID_SCALING.x ** 2 * (1 - sphereY ** 2 / UFO_ELLIPSOID_SCALING.y ** 2)
-    );
+    const sphereX = - (UFO_ELLIPSOID_SCALING.x - 1.5 + 0.5 / 2);
+    const sphereY = - UFO_ELLIPSOID_SCALING.y / 2 - 0.25;
     sphere.position.set(sphereX, sphereY, 0);
 
-    const sphereLight = new THREE.PointLight(0xff0000, UFOSPHERELIGHT_INTENSITY, 25);
+    const sphereLight = new THREE.PointLight(0xff0000, UFOSPHERELIGHT_INTENSITY, 20);
     //set light source slightly away from disc reach
-    sphereLight.position.set(sphereX, sphereY, 0); 
+    sphereLight.position.set(sphereX, sphereY - 0.25, 0); 
     sphereGroup.add(sphereLight);
     ufoSphereLights.push(sphereLight);
   }
@@ -907,9 +901,13 @@ function update(timeDelta) {
     }
     renderer.xr.isPresenting = isXrPresenting;
   }
-  if (toggleActiveCamera) {
-    toggleActiveCamera = false;
-    activeCamera = activeCamera == ORBITAL_CAMERA ? FIXED_CAMERA : ORBITAL_CAMERA;
+  if (toggleActiveCamera && activeCamera == FIXED_CAMERA) {
+    activeCamera = ORBITAL_CAMERA;
+    refreshCameraParameters(activeCamera);
+  }
+
+  if (!toggleActiveCamera && activeCamera == ORBITAL_CAMERA) {
+    activeCamera = FIXED_CAMERA;
     refreshCameraParameters(activeCamera);
   }
 
@@ -1009,8 +1007,9 @@ function onKeyDown(event) {
     case '3': //extra: debug camera
       toggleActiveCamera = true;
       break;
-    case '7':
+    case '7': //perspective camera
       updateProjectionMatrix = true;
+      toggleActiveCamera = false;
       break;
   }
 }
