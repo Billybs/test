@@ -1,3 +1,12 @@
+/**
+ * Project realized by:
+ * André Santos ist1106919
+ * Bibiana André ist194158
+ * Manuel Martins ist1106454
+ * 
+ * Average work distribution: 20h per member
+ */
+
 
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -5,9 +14,9 @@ import { VRButton } from "three/addons/webxr/VRButton.js";
 import * as Stats from "three/addons/libs/stats.module.js";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 
-//////////////////////
-/* GLOBAL CONSTANTS */
-//////////////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* -------------------------------------- GLOBAL CONSTANTS -------------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
 const DOME_RADIUS = 100;
 const RESOLUTION = 256;
@@ -15,7 +24,7 @@ const RESOLUTION = 256;
 const GEOMETRY = Object.freeze({
   dome: new THREE.SphereGeometry(DOME_RADIUS, 32, 32, 0, 2 * Math.PI, 0, Math.PI / 2),
   soil: new THREE.PlaneGeometry(DOME_RADIUS * 2, DOME_RADIUS * 2, RESOLUTION - 1, RESOLUTION - 1),
-  moon: new THREE.SphereGeometry(5, 32, 32),
+  moon: new THREE.SphereGeometry(8, 32, 32),
   ufoDisc: new THREE.SphereGeometry(1, 32, 32), //to be scaled
   ufoCockpit: new THREE.SphereGeometry(2, 32, 32),
   ufoLight: new THREE.CylinderGeometry(1.5, 1.5, 1, 32),
@@ -42,7 +51,7 @@ const MATERIAL = Object.freeze({
     basic: new THREE.MeshBasicMaterial({ color: '#5b5b5b', shininess: 600 }), 
     gouraud: new THREE.MeshLambertMaterial({ color: '#5b5b5b', shininess: 600 }),
     phong: new THREE.MeshPhongMaterial({ color: '#5b5b5b', shininess: 600}),
-    toon: new THREE.MeshToonMaterial({ color: '#5b5b5b', shininess: 600}),
+    toon: new THREE.MeshToonMaterial({ color: '#5b5b5b' }),
   },
   //
   ufoCockpit: { //light grey with transparency and shiny
@@ -125,23 +134,23 @@ const MATERIAL = Object.freeze({
 
 const STAR_COUNT = 700;
 const FLOWER_COUNT = 350;
-const STAR_RADIUS = 0.05;
+const STAR_RADIUS = 0.1;
 const FLOWER_RADIUS = 0.5;
 const SOILMAP_PATH = './images/heightmap.png';
 
 const AMBIENTLIGHT_INTENSITY = 0.1;
 const DIRECTIONALLIGHT_INTENSITY = 0.3;
 
-const UFOLIGHT_INTENSITY = 300;
-const UFOLIGHT_ANGLE = Math.PI / 7;
-const UFOLIGHT_PENUMBRA = 0.2;
+const UFOLIGHT_INTENSITY = 250;
+const UFOLIGHT_ANGLE = Math.PI / 4;
+const UFOLIGHT_PENUMBRA = 0.4;
 const UFOSPHERELIGHT_COUNT = 8;
-const UFOSPHERELIGHT_INTENSITY = 25;
-const UFO_ELLIPSOID_SCALING = new THREE.Vector3(5, 1, 5);
+const UFOSPHERELIGHT_INTENSITY = 0.6;
+const UFO_ELLIPSOID_SCALING = new THREE.Vector3(5, 1.2, 5);
 const UFO_ANGULAR_VEL = (2 * Math.PI) / 8; 
 const UFO_LINEAR_VEL = 8;
 
-const MOON_COORDS = new THREE.Vector3(20, 45, 50);
+const MOON_COORDS = new THREE.Vector3(60, 45, 60);
 const CLOCK = new THREE.Clock();
 const keysPressed = new Set();
 
@@ -162,52 +171,50 @@ const FIXED_CAMERA = createPerspectiveCamera({
   z: -42,
 });
 
-//////////////////////
-/* GLOBAL VARIABLES */
-//////////////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* -------------------------------------- GLOBAL VARIABLES -------------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
-let renderer, scene, baseGroup, activeCamera = ORBITAL_CAMERA;
+let renderer, scene, baseGroup, activeCamera = FIXED_CAMERA;
 let orbitControls = null;
 
 let sky, skyTexture, soil, soilTexture, soilGeometry; //textured meshes
 
 let ufo, ufoLight, ufoSphereLights = [];
-
 let meshes = []; //object meshes
 
 // flags for event handlers
 let updateProjectionMatrix = false;
 let toggleActiveCamera = false;
 
-// lights
+// lights and materials
 let ambientLight, directionalLight, activeMaterial = 'phong'; // initial material
 let newMaterial = false;
 let directionalLightEnabled = true;
 
-/////////////////////
-/* CREATE SCENE(S) */
-/////////////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* --------------------------------------- CREATE SCENE(S) -------------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
 function createScene() {
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1e4e09); // grass green
-    baseGroup = createGroup({ y: -5, parent: scene });
-    createSoil();
-    createSkyDome();
-    createLights();
-    createMoon();
-    createUfo();
-    createHouse();
-    scene.add(new THREE.AxesHelper(20));
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1e4e09); // grass green
+  baseGroup = createGroup({ y: -5, parent: scene }); //all objects slightly below zero for VR
+  createSoil();
+  createSkyDome();
+  createLights();
+  createMoon();
+  createUfo();
+  createHouse();
 }
 
-//////////////////////
-/* CREATE CAMERA(S) */
-//////////////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* -------------------------------------- CREATE CAMERA(S) -------------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
 function createCameras() {
-  const orbitControls = new OrbitControls(ORBITAL_CAMERA, renderer.domElement);
-  orbitControls.target.set(0, -5, 0);
+  orbitControls = new OrbitControls(ORBITAL_CAMERA, renderer.domElement);
+  orbitControls.target.set(0, 0, 0);
   orbitControls.keys = {
     LEFT: 72, // h
     UP: 75, // k
@@ -241,9 +248,9 @@ function refreshCameraParameters(camera) {
   camera.updateProjectionMatrix();
 }
 
-/////////////////////
-/* CREATE LIGHT(S) */
-/////////////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* --------------------------------------- CREATE LIGHT(S) -------------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
 function createLights() {
   ambientLight = new THREE.AmbientLight(0xd2d6f3, AMBIENTLIGHT_INTENSITY); //silver
@@ -271,7 +278,7 @@ function createSkyTexture() {
   const ctx = canvas.getContext('2d');
 
   const gradient = ctx.createLinearGradient(0, 0, 0, size);
-  gradient.addColorStop(0, '#000e40'); //deep blue
+  gradient.addColorStop(0, '#001640'); //deep blue
   gradient.addColorStop(1, '#140040'); //deep purple 
 
   ctx.fillStyle = gradient;
@@ -290,7 +297,6 @@ function createSkyTexture() {
   skyTexture.needsUpdate = true;
 }
 
-
 async function createSoil() {
   soilGeometry = await createSoilGeometry(); //save geometry in global variable
   createSoilTexture();
@@ -299,7 +305,6 @@ async function createSoil() {
   baseGroup.add(soil);
   createTrees();
 }
-
 
 async function createSoilGeometry() {
   const loader = new THREE.TextureLoader();
@@ -365,13 +370,16 @@ function createMoon() {
 
 function createUfo() {
   ufo = new THREE.Group();
-  ufo.position.set(0, 25, 0);
+  ufo.position.set(0, 20, 0);
   baseGroup.add(ufo);
 
   const disc = createNamedMesh('ufoDisc', ufo);
   disc.scale.copy(UFO_ELLIPSOID_SCALING);
+  disc.castShadow = true;
+
   const cockpit = createNamedMesh('ufoCockpit', ufo);
-  cockpit.position.set(0, UFO_ELLIPSOID_SCALING.y / 2, 0);
+  cockpit.position.set(0, UFO_ELLIPSOID_SCALING.y / 2 + 0.2, 0);
+
   const light = createNamedMesh('ufoLight', ufo);
   light.position.set(0, -UFO_ELLIPSOID_SCALING.y, 0);
   const lightTarget = new THREE.Object3D();
@@ -394,12 +402,19 @@ function createUfo() {
 
     // calculate sphereX by subtracting the light radius and adding 1/2 of the 
     // sphere light radius to the disc ellipsoid radius
-    const sphereX = - (UFO_ELLIPSOID_SCALING.x - 1.5 + 0.5 / 2);
-    const sphereY = - UFO_ELLIPSOID_SCALING.y / 2;
+
+    const sphereY = -UFO_ELLIPSOID_SCALING.y / 2;
+    // Calculate sphereX by intercepting the ellipse equation at this Y coordinate
+    // Ellipse equation: x^2/a^2 + y^2/b^2 = 1, where a is rx and b is ry.
+    // Therefore, x = sqrt(a^2 * (1 - y^2/b^2))
+    const sphereX = Math.sqrt(
+      UFO_ELLIPSOID_SCALING.x ** 2 * (1 - sphereY ** 2 / UFO_ELLIPSOID_SCALING.y ** 2)
+    );
     sphere.position.set(sphereX, sphereY, 0);
 
-    const sphereLight = new THREE.PointLight(0xff0000, UFOSPHERELIGHT_INTENSITY, 30);
-    sphereLight.position.set(sphereX, sphereY, 0);
+    const sphereLight = new THREE.PointLight(0xff0000, UFOSPHERELIGHT_INTENSITY, 25);
+    //set light source slightly away from disc reach
+    sphereLight.position.set(sphereX, sphereY, 0); 
     sphereGroup.add(sphereLight);
     ufoSphereLights.push(sphereLight);
   }
@@ -738,13 +753,8 @@ function createHouseWindowsGeometry() {
  * Returns a THREE.Group whose local “ground” is at y=0.  The caller should position/rotate/scale it
  * in world space as needed (we’ll randomly rotate it around Y and position it on the terrain).
  */
-function createTree() {
+function createTree(branchLen1) {
   const tree = new THREE.Group();
-
-  // —————————————————————————————————————————————
-  // 1) THE FIRST (LONG) BRANCH – LENGTH = 8, RADIUS = 0.5
-  // —————————————————————————————————————————————
-  const branchLen1 = 8;        // was 4, now doubled
 
   // Pick two tilt angles:
   //   • tilt1 between 20°–30° for the first branch
@@ -756,6 +766,7 @@ function createTree() {
   const firstBranch = createNamedMesh('treeFirstBranch', tree);
   firstBranch.rotation.z = +tilt1; // lean “forwards” by tilt1
 
+  firstBranch.scale.y = branchLen1 / 8;
   // Position its center so the bottom end touches local y=0:
   //   upVec1 = (0,1,0) rotated by +tilt1 around Z
   const upVec1 = new THREE.Vector3(0, 1, 0).applyAxisAngle(new THREE.Vector3(0, 0, 1), tilt1);
@@ -827,10 +838,13 @@ function createTrees() {
     { x:  30, z:   5 },
   ];
 
+  const branchLengths = [6, 10, 8, 12, 9, 4];
+
   const raycaster = new THREE.Raycaster();
   const down = new THREE.Vector3(0, -1, 0);
 
-  for (let pos of positions) {
+  for (let i = 0; i < positions.length; i++) {
+    const pos = positions[i];
     // Raycast from high above (x,100,z) straight down:
     const origin = new THREE.Vector3(pos.x, 100, pos.z);
     raycaster.set(origin, down);
@@ -841,7 +855,7 @@ function createTrees() {
     const groundPt = hits[0].point;
 
     // Build a new Y-shaped tree:
-    const tree = createTree();
+    const tree = createTree(branchLengths[i]);
     
     // Randomly spin it around Y so they don’t all face the same way:
     tree.rotation.y = Math.random() * Math.PI * 2;
@@ -854,9 +868,9 @@ function createTrees() {
   }
 }
 
-////////////
-/* UPDATE */
-////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* ------------------------------------------ UPDATE -------------------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
 function handleUfoMovement(timeDelta) {
   // Build a 2D (X,Z) direction vector based on which arrows are down
@@ -907,17 +921,17 @@ function update(timeDelta) {
     orbitControls.update();
 }
 
-/////////////
-/* DISPLAY */
-/////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* ------------------------------------------- DISPLAY ------------------------------------------ */
+/* ---------------------------------------------------------------------------------------------- */
 
 function render() {
   renderer.render(scene, activeCamera);
 }
 
-////////////////////////////////
-/* INITIALIZE ANIMATION CYCLE */
-////////////////////////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* --------------------------------- INITIALIZE ANIMATION CYCLE --------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
 function init() {
   renderer = new THREE.WebGLRenderer({ antialias: true, });
@@ -939,9 +953,9 @@ function init() {
   window.addEventListener('keyup', onKeyUp);
 }
 
-/////////////////////
-/* ANIMATION CYCLE */
-/////////////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* --------------------------------------- ANIMATION CYCLE -------------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
 function animate() {
   const timeDelta = CLOCK.getDelta();
@@ -950,71 +964,55 @@ function animate() {
   renderer.setAnimationLoop(animate);
 }
 
-////////////////////////////
-/* RESIZE WINDOW CALLBACK */
-////////////////////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* ----------------------------------- RESIZE WINDOW CALLBACK ----------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
 function onResize() {
   updateProjectionMatrix = true;
 }
 
-//////////////////
-/* KEY HANDLERS */
-//////////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* ---------------------------------------- KEY HANDLERS ---------------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
 function onKeyDown(event) {
   keysPressed.add(event.key);
   switch (event.key.toLowerCase()) {
-    case 'd':
-      onKeyDownD();
-      break;
-    case 's':
-      onKeyDownS();
-      break;
-    case 'p':
-      onKeyDownP();
-      break;
     case '1':
       onKeyDown1();
       break;
     case '2':
       onKeyDown2();
       break;
-    case 'w':
-      activeMaterial = 'phong';
-      newMaterial = true;
-      break;
     case 'q':
-      activeMaterial = 'gouraud';
-      newMaterial = true;
+      onKeyDownQ();
+      break;
+    case 'w':
+      onKeyDownW();
       break;
     case 'e':
-      activeMaterial = 'toon';
-      newMaterial = true;
+      onKeyDownE();
       break;
     case 'r':
-      activeMaterial = activeMaterial === 'basic' ? 'phong' : 'basic';
-      newMaterial = true;
+      onKeyDownR();
+      break;
+    case 'p':
+      onKeyDownP();
+      break;
+    case 's':
+      onKeyDownS();
+      break;
+    case 'd':
+      onKeyDownD();
+      break;
+    case '3': //extra: debug camera
+      toggleActiveCamera = true;
+      break;
+    case '7':
+      updateProjectionMatrix = true;
       break;
   }
-}
-
-// enable or disable directional light
-function onKeyDownD() {
-  directionalLightEnabled = !directionalLightEnabled;
-  directionalLight.visible = directionalLightEnabled;
-}
-
-// enable or disable spotlight
-function onKeyDownS() {
-  ufoLight.visible = !ufoLight.visible;
-}
-
-// enable or disable point light
-function onKeyDownP() {
-    ufoSphereLights.forEach(light => {
-        light.visible = !light.visible;
-    });
 }
 
 // generate new soil texture
@@ -1035,13 +1033,58 @@ function onKeyDown2() {
   sky.add(mesh);
 }
 
+// lambert 
+function onKeyDownQ() {
+  if (activeMaterial === 'gouraud') return;
+  activeMaterial = 'gouraud';
+  newMaterial = true;
+}
+
+// phong 
+function onKeyDownW() {
+  if (activeMaterial === 'phong') return;
+  activeMaterial = 'phong';
+  newMaterial = true;
+}
+
+// cartoon 
+function onKeyDownE() {
+  if (activeMaterial === 'toon') return;
+  activeMaterial = 'toon';
+  newMaterial = true;
+}
+
+// basic
+function onKeyDownR() {
+  activeMaterial = activeMaterial === 'basic' ? 'phong' : 'basic';
+  newMaterial = true;
+}
+
+// enable or disable point light
+function onKeyDownP() {
+    ufoSphereLights.forEach(light => {
+        light.visible = !light.visible;
+    });
+}
+
+// enable or disable spotlight
+function onKeyDownS() {
+  ufoLight.visible = !ufoLight.visible;
+}
+
+// enable or disable directional light
+function onKeyDownD() {
+  directionalLightEnabled = !directionalLightEnabled;
+  directionalLight.visible = directionalLightEnabled;
+}
+
 function onKeyUp(event) {
   keysPressed.delete(event.key);
 }
 
-///////////////
-/* UTILITIES */
-//////////////
+/* ---------------------------------------------------------------------------------------------- */
+/* ------------------------------------------ UTILITIES ----------------------------------------- */
+/* ---------------------------------------------------------------------------------------------- */
 
 // create a THREE.Group on the given position and with the given scale.
 // automatically adds the created Group to the given parent.
@@ -1081,6 +1124,8 @@ function createHouseGeometry({ vertices, indexes, scale = 1}) {
   geometry.computeVertexNormals();
   return geometry;
 }
+
+/* ---------------------------------------------------------------------------------------------- */
 
 init();
 animate();
